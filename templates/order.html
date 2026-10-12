@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}订单结果 #{{ order.id }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">订单完成</div>
+            <div class="card-body">
+                <h5>订单号: {{ order.id }}</h5>
+                <p>商品: {{ order.product_name }}</p>
+                <p>金额: ¥{{ "%.2f"|format(order.amount) }}</p>
+                <p>状态: <span class="badge bg-success">{{ order.status }}</span></p>
+                <p>支付方式: {{ order.payment_method or '-' }}</p>
+                {% if order.card_code %}
+                <hr>
+                <h4 class="text-center">您的卡密</h4>
+                <div class="alert alert-info text-center">
+                    <code style="font-size: 1.2rem;">{{ order.card_code }}</code>
+                </div>
+                <p class="text-muted text-center">请妥善保存，卡密一旦售出不支持退换。</p>
+                {% else %}
+                <div class="alert alert-warning">卡密发放中或异常，请联系客服。</div>
+                {% endif %}
+            </div>
+        </div>
+        <a href="/" class="btn btn-primary mt-3">返回首页</a>
+    </div>
+</div>
+{% endblock %}

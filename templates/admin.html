@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}管理后台{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>管理后台</h1>
+    <a href="/admin/logout" class="btn btn-outline-danger">退出登录</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5>商品数</h5>
+                <h2>{{ stats.product_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5>可用卡密</h5>
+                <h2>{{ stats.available_cards }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5>已支付订单</h5>
+                <h2>{{ stats.paid_orders }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5>总收入</h5>
+                <h2>¥{{ "%.2f"|format(stats.total_revenue) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">添加商品</div>
+            <div class="card-body">
+                <form action="/admin/product/add" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">商品名称</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">描述</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">价格 (元)</label>
+                        <input type="number" step="0.01" name="price" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">生成卡密</div>
+            <div class="card-body">
+                <form action="/admin/cards/generate" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">选择商品</label>
+                        <select name="product_id" class="form-select" required>
+                            {% for p in products %}
+                            <option value="{{ p.id }}">{{ p.name }} (ID:{{ p.id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">生成数量</label>
+                        <input type="number" name="count" value="10" min="1" max="1000" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-success">批量生成</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">商品列表</div>
+            <div class="card-body">
+                {% if products %}
+                <ul class="list-group">
+                    {% for p in products %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ p.name }} - ¥{{ "%.2f"|format(p.price) }}
+                        <a href="/admin/cards/{{ p.id }}" class="btn btn-sm btn-outline-primary">查看卡密</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>暂无商品</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">最近订单</div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if recent_orders %}
+                <table class="table table-sm">
+                    <thead><tr><th>ID</th><th>商品</th><th>金额</th><th>状态</th></tr></thead>
+                    <tbody>
+                    {% for o in recent_orders %}
+                    <tr>
+                        <td>{{ o.id }}</td>
+                        <td>{{ o.product_name }}</td>
+                        <td>¥{{ "%.2f"|format(o.amount) }}</td>
+                        <td><span class="badge bg-{{ 'success' if o.status=='paid' else 'warning' }}">{{ o.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p>暂无订单</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

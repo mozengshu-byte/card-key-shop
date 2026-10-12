@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}首页 - 卡密商城{% endblock %}
+{% block content %}
+<h1 class="mb-4">商品列表</h1>
+{% if products %}
+<div class="row">
+    {% for p in products %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">{{ p.name }}</h5>
+                <p class="card-text text-muted">{{ p.description or '暂无描述' }}</p>
+                <p class="card-text"><strong class="text-primary">¥{{ "%.2f"|format(p.price) }}</strong></p>
+                <span class="badge bg-{{ 'success' if p.stock > 0 else 'secondary' }} stock-badge">
+                    库存: {{ p.stock }}
+                </span>
+            </div>
+            <div class="card-footer bg-white">
+                <a href="/product/{{ p.id }}" class="btn btn-primary w-100">查看详情</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">暂无商品，请管理员添加。</div>
+{% endif %}
+{% endblock %}

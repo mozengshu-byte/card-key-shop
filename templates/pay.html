@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}支付订单 #{{ order.id }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">支付订单</div>
+            <div class="card-body">
+                <h5>订单号: {{ order.id }}</h5>
+                <p>商品: {{ order.product_name }}</p>
+                <p class="lead">应付金额: <strong class="text-danger">¥{{ "%.2f"|format(order.amount) }}</strong></p>
+                <hr>
+                <p class="text-muted">请选择支付方式（当前为模拟支付，真实环境可对接支付宝/微信支付接口）</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-lg pay-btn" data-method="支付宝">支付宝支付</button>
+                    <button class="btn btn-primary btn-lg pay-btn" data-method="微信支付">微信支付</button>
+                    <button class="btn btn-secondary btn-lg pay-btn" data-method="模拟支付">模拟支付成功</button>
+                </div>
+                <div id="result" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.pay-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const method = this.dataset.method;
+        this.disabled = true;
+        this.innerText = '处理中...';
+        try {
+            const resp = await fetch('/pay/confirm/{{ order.id }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: 'method=' + encodeURIComponent(method)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                window.location.href = data.redirect;
+            } else {
+                document.getElementById('result').innerHTML = '<div class="alert alert-danger">' + data.msg + '</div>';
+                this.disabled = false;
+                this.innerText = this.dataset.method + '支付';
+            }
+        } catch (e) {
+            document.getElementById('result').innerHTML = '<div class="alert alert-danger">支付失败，请重试</div>';
+            this.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

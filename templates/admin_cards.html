@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}卡密列表 - {{ product.name }}{% endblock %}
+{% block content %}
+<h2>{{ product.name }} 的卡密</h2>
+<a href="/admin" class="btn btn-secondary mb-3">返回后台</a>
+{% if cards %}
+<table class="table table-striped">
+    <thead>
+        <tr><th>ID</th><th>卡密</th><th>状态</th><th>订单ID</th><th>创建时间</th></tr>
+    </thead>
+    <tbody>
+        {% for c in cards %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td><code>{{ c.code }}</code></td>
+            <td><span class="badge bg-{{ 'success' if c.status=='available' else 'secondary' }}">{{ c.status }}</span></td>
+            <td>{{ c.order_id or '-' }}</td>
+            <td>{{ c.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>暂无卡密</p>
+{% endif %}
+{% endblock %}

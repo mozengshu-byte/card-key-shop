@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ product.name }} - 卡密商城{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>{{ product.name }}</h2>
+        <p class="lead">{{ product.description or '暂无详细描述' }}</p>
+        <h3 class="text-primary">¥{{ "%.2f"|format(product.price) }}</h3>
+        <p>库存: <span class="badge bg-{{ 'success' if stock > 0 else 'danger' }}">{{ stock }}</span></p>
+        {% if stock > 0 %}
+        <a href="/buy/{{ product.id }}" class="btn btn-success btn-lg">立即购买</a>
+        {% else %}
+        <button class="btn btn-secondary btn-lg" disabled>暂时缺货</button>
+        {% endif %}
+    </div>
+</div>
+<a href="/" class="btn btn-link mt-3">返回首页</a>
+{% endblock %}

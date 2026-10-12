@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}确认购买 - {{ product.name }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">确认订单</div>
+            <div class="card-body">
+                <h5>{{ product.name }}</h5>
+                <p>价格: <strong>¥{{ "%.2f"|format(product.price) }}</strong></p>
+                <p>当前库存: {{ stock }}</p>
+                <form method="post">
+                    <button type="submit" class="btn btn-primary w-100">确认下单并去支付</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
