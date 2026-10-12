@@ -10,7 +10,17 @@
                 <p>商品: {{ order.product_name }}</p>
                 <p class="lead">应付金额: <strong class="text-danger">¥{{ "%.2f"|format(order.amount) }}</strong></p>
                 <hr>
-                <p class="text-muted">请选择支付方式（当前为模拟支付，真实环境可对接支付宝/微信支付接口）</p>
+                <p class="text-muted">请使用支付宝扫描下方二维码完成支付</p>
+                {% if qr_exists %}
+                <div class="text-center mb-3">
+                    <img src="/static/uploads/alipay_qr.png" class="img-fluid" style="max-width: 250px;" alt="支付宝收款码">
+                    <p class="mt-2"><strong>应付金额：¥{{ "%.2f"|format(order.amount) }}</strong></p>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">管理员尚未上传收款码，请联系客服。</div>
+                {% endif %}
+                <hr>
+                <p class="text-muted">支付完成后请点击下方按钮确认（当前为演示，点击即发货）</p>
                 <div class="d-grid gap-2">
                     <button class="btn btn-success btn-lg pay-btn" data-method="支付宝">支付宝支付</button>
                     <button class="btn btn-primary btn-lg pay-btn" data-method="微信支付">微信支付</button>

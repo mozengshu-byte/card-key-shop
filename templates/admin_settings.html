@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}收款设置{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">支付宝收款码设置</div>
+            <div class="card-body">
+                {% if has_qr %}
+                <div class="text-center mb-3">
+                    <p>当前收款码：</p>
+                    <img src="/static/uploads/alipay_qr.png" class="img-fluid" style="max-width: 300px;" alt="支付宝收款码">
+                </div>
+                {% else %}
+                <div class="alert alert-warning">尚未上传收款码</div>
+                {% endif %}
+                <form method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">上传新的支付宝收款码（图片）</label>
+                        <input type="file" name="qr" class="form-control" accept="image/*" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">上传</button>
+                    <a href="/admin" class="btn btn-secondary">返回后台</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

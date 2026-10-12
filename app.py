@@ -4,16 +4,28 @@ import secrets
 import string
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data.db")
+UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "static", "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def generate_card_code(length=16):
+    chars = string.ascii_uppercase + string.digits
+    return "-".join(["".join(secrets.choice(chars) for _ in range(4)) for _ in range(4)])
 
 def init_db():
     conn = get_db()
@@ -64,12 +76,40 @@ def init_db():
     c.execute("SELECT COUNT(*) FROM admins")
     if c.fetchone()[0] == 0:
         c.execute("INSERT INTO admins (username, password) VALUES (?, ?)", ("admin", "admin123"))
+    
+    # Seed default products from PriceAI if none exist
+    c.execute("SELECT COUNT(*) FROM products")
+    if c.fetchone()[0] == 0:
+        products = [
+            ("ChatGPT 普号", "ChatGPT 普通账号、Free号、白号或可领取试用的资格号。交付为普通账号，不含会员。", 0.50),
+            ("ChatGPT Plus 试用/成品号", "ChatGPT Plus 日抛、短期成品号、网页号、已/未接码。购买前请核对接码状态和售后。", 18.00),
+            ("ChatGPT Go", "ChatGPT Go 月卡、年卡、激活码或内购直充。", 30.84),
+            ("ChatGPT Team / Business", "ChatGPT Team、Business、K12、1x/5x Team 车位、正价席位、母号等。", 20.00),
+            ("ChatGPT Pro 5x（100刀档）", "ChatGPT Pro 100刀档（Pro 5x）。约5倍Plus用量，支持充值/代开/卡密。", 144.20),
+            ("ChatGPT Pro 20x（200刀档）", "ChatGPT Pro 200刀档（Pro 20x）。更高用量额度，充值或成品号。", 246.00),
+            ("ChatGPT Pro 500刀档", "ChatGPT Pro 500刀档（Pro Max / 25x）。最高额度档。", 604.00),
+            ("Codex 额度充值 250点", "官方 Codex 点数（Credits）充值，直充自己号。", 75.00),
+            ("Claude Pro", "Claude Pro 订阅、直充或卡密。", 75.00),
+            ("Claude Max 5x", "Claude Max 5x 高额度套餐。", 650.00),
+            ("Claude Max 20x", "Claude Max 20x 最高额度套餐。", 1026.00),
+            ("SuperGrok Lite", "Grok SuperGrok Lite 会员。", 63.00),
+            ("SuperGrok", "Super Grok 成品号、卡密、直充或月卡。", 30.00),
+            ("SuperGrok Heavy", "SuperGrok Heavy / Grok Heavy 高阶会员。", 80.00),
+            ("Gemini AI Pro", "Google Gemini AI Pro 订阅。", 80.00),
+        ]
+        for name, desc, price in products:
+            c.execute("INSERT INTO products (name, description, price) VALUES (?, ?, ?)", (name, desc, price))
+            pid = c.lastrowid
+            # Generate 5 sample cards each
+            for _ in range(5):
+                code = generate_card_code()
+                try:
+                    c.execute("INSERT INTO cards (product_id, code) VALUES (?, ?)", (pid, code))
+                except:
+                    pass
+    
     conn.commit()
     conn.close()
-
-def generate_card_code(length=16):
-    chars = string.ascii_uppercase + string.digits
-    return "-".join(["".join(secrets.choice(chars) for _ in range(4)) for _ in range(4)])
 
 @app.route("/")
 def index():
@@ -129,7 +169,8 @@ def pay(order_id):
     conn.close()
     if not order or order["status"] != "pending":
         return "订单无效", 404
-    return render_template("pay.html", order=order)
+    qr_exists = os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], "alipay_qr.png"))
+    return render_template("pay.html", order=order, qr_exists=qr_exists)
 
 @app.route("/pay/confirm/<int:order_id>", methods=["POST"])
 def confirm_pay(order_id):
@@ -243,6 +284,80 @@ def add_product():
     conn.close()
     flash("商品添加成功", "success")
     return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/product/edit/<int:pid>", methods=["GET", "POST"])
+@admin_required
+def edit_product(pid):
+    conn = get_db()
+    product = conn.execute("SELECT * FROM products WHERE id = ?", (pid,)).fetchone()
+    if not product:
+        conn.close()
+        flash("商品不存在", "error")
+        return redirect(url_for("admin_dashboard"))
+    
+    if request.method == "POST":
+        name = request.form.get("name")
+        description = request.form.get("description", "")
+        price = float(request.form.get("price", 0))
+        if not name or price <= 0:
+            flash("请填写有效的商品信息", "error")
+        else:
+            conn.execute("UPDATE products SET name=?, description=?, price=? WHERE id=?", (name, description, price, pid))
+            conn.commit()
+            flash("商品更新成功", "success")
+            conn.close()
+            return redirect(url_for("admin_dashboard"))
+    
+    conn.close()
+    return render_template("admin_edit.html", product=product)
+
+@app.route("/admin/change-password", methods=["GET", "POST"])
+@admin_required
+def change_password():
+    if request.method == "POST":
+        old_pwd = request.form.get("old_password")
+        new_pwd = request.form.get("new_password")
+        confirm_pwd = request.form.get("confirm_password")
+        
+        if new_pwd != confirm_pwd:
+            flash("两次输入的新密码不一致", "error")
+            return redirect(url_for("change_password"))
+        if len(new_pwd) < 4:
+            flash("新密码至少4位", "error")
+            return redirect(url_for("change_password"))
+        
+        conn = get_db()
+        admin = conn.execute("SELECT * FROM admins WHERE username = ?", (session.get("admin_user"),)).fetchone()
+        if not admin or admin["password"] != old_pwd:
+            conn.close()
+            flash("原密码错误", "error")
+            return redirect(url_for("change_password"))
+        
+        conn.execute("UPDATE admins SET password = ? WHERE username = ?", (new_pwd, session.get("admin_user")))
+        conn.commit()
+        conn.close()
+        flash("密码修改成功，请使用新密码登录", "success")
+        return redirect(url_for("admin_dashboard"))
+    
+    return render_template("admin_change_password.html")
+
+@app.route("/admin/settings", methods=["GET", "POST"])
+@admin_required
+def admin_settings():
+    qr_path = os.path.join(app.config['UPLOAD_FOLDER'], "alipay_qr.png")
+    has_qr = os.path.exists(qr_path)
+    
+    if request.method == "POST":
+        if 'qr' in request.files:
+            file = request.files['qr']
+            if file and allowed_file(file.filename):
+                file.save(qr_path)
+                flash("支付宝收款码上传成功", "success")
+                return redirect(url_for("admin_settings"))
+            else:
+                flash("请上传有效的图片文件（png/jpg等）", "error")
+    
+    return render_template("admin_settings.html", has_qr=has_qr)
 
 @app.route("/admin/cards/generate", methods=["POST"])
 @admin_required
